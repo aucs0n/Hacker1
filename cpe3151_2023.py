@@ -1,88 +1,29 @@
-def crib_drag_attack(guess, cp1, cp2):
-    xor_ciphers = ""
-    for idx in range(len(cp1)):
-        ic1 = ord(cp1[idx])
-        ic2 = ord(cp2[idx])
-        ic_xor = ic1 ^ ic2
-        xor_ciphers += chr(ic_xor)
-    # print(xor_ciphers.encode("ascii").hex())
+def xor_bytes(a: bytes, b: bytes) -> bytes:
+    return bytes(x ^ y for x, y in zip(a, b))
 
-    for idx in range(len(xor_ciphers) - len(guess) + 1):
-        slide = xor_ciphers[idx: idx + len(guess)]
-        results = ""
-        for i in range(len(guess)):
-            ig = ord(guess[i])
-            id = ord(slide[i])
-            ir = ig ^ id
-            results += chr(ir)
-        print(results)
+def printable(bs: bytes) -> str:
+    # show ASCII; non-printables as dots to eyeball results
+    return ''.join(chr(b) if 32 <= b <= 126 else '.' for b in bs)
 
+def crib_drag_attack(guess: str, c1_hex: str, c2_hex: str):
+    c1 = bytes.fromhex(c1_hex)          # RAW BYTES, not .decode('ascii')
+    c2 = bytes.fromhex(c2_hex)
+    x  = xor_bytes(c1, c2)              # Cp1 ⊕ Cp2 = P1 ⊕ P2
 
-def match_key(key, data):
-    p_size = len(data)
-    k_size = len(key)
-    # print('P_SIZE: {} -- K_SIZE: {}'.format(p_size, k_size))
-    if k_size < p_size:  # if key size is less than p_size, add character
-        add_key = p_size - k_size
-        for x in range(add_key):
-            key = '{}{}'.format(key, key[x])
-    else:
-        key = '{}'.format(key[:p_size])
-    # p_size = len(plaintext)
-    # k_size = len(key)
-    # print('NEW P_SIZE: {} -- K_SIZE: {}, KEY={}'.format(p_size, k_size, key))
-    return key
+    g = guess.encode('ascii', 'ignore') # crib as bytes
+    L = len(g)
+    if L == 0 or L > len(x):
+        print("Crib length invalid for these ciphertexts.")
+        return
 
-
-def encrypt(key, plaintext):
-    idx = 0  # Declare index (idx) variable
-
-    key = match_key(key, plaintext)
-    ciphertext = ""  # Declare ciphertext variable
-    for p in plaintext:  # Take one character at a time in message
-        ip = ord(p)  # Convert to Decimal value code
-        k = key[idx]  # Take byte value of the key at idx
-        ik = ord(k)  # Convert to Decimal value code
-        inew = ip ^ ik  # XOR bit-by-bit
-        ciphertext += chr(inew)  # Convert to character code and Update ciphertext
-        print(p, hex(ip), k, hex(ik), hex(inew))  # print every result
-        idx += 1  # Increment idx by 1
-    # print("LENGTH CIPHERTEXT: {}".format(len(ciphertext)))
-    hexstring = ciphertext.encode("ascii").hex()
-
-    print("\nCheck here...")
-    print("{}".format(plaintext, ciphertext))
-    print("{}".format(ciphertext))
-    print("{}".format(hexstring))
-
-    return ciphertext
-
-
-def decrypt(key, ciphertext):
-    idx = 0  # Declare index (idx) variable
-    key = match_key(key, ciphertext)
-    plaintext = ""  # Declare plaintext variable
-    for c in ciphertext:  # Take one character at a time in message
-        ic = ord(c)  # Convert to Decimal value code
-        k = key[idx]  # Take byte value of the key at idx
-        ik = ord(k)  # Convert to Decimal value code
-        inew = ic ^ ik  # XOR bit-by-bit
-        plaintext += chr(inew)  # Convert to character code and Update ciphertext
-        # print(c, hex(ic), k, hex(ik), hex(inew))  # print every result
-        idx += 1  # Increment idx by 1
-
-    print("\n{} --> {}\n".format(plaintext, plaintext.encode("ascii").hex()))
-    return plaintext
-
+    for i in range(len(x) - L + 1):
+        window = x[i:i+L]               # (P1⊕P2)[i..i+L)
+        other  = bytes([window[j] ^ g[j] for j in range(L)])  # reveals P(other)
+        print(f"{i:02d}: {printable(other)}")
 
 if __name__ == '__main__':
-    message1 = " "
-    key = " "
-
-    ciphertextHex1 = ""  # insert between " " the assigned ciphertext in hexstring format
-    ciphertextHex2 = ""  # insert between " " the assigned ciphertext in hexstring format
-
-    # Convert the hexstring format to ascii string format. Insert script below.
+    ciphertextHex1 = "23000407450a01450d04100b49103115215a451552021d09501b010810161743141c0d541a151a41031a404b"
+    ciphertextHex2 = "37091717450d0708160e17434943704468060702094e5e5f434159554746504f55111f02590a1f414b411b5a"
 
     guess = input("Guess a word: ")
-    crib_drag_attack(guess, ciphertext1, ciphertext2)
+    crib_drag_attack(guess, ciphertextHex1, ciphertextHex2)
